@@ -162,3 +162,4 @@ if st.button("🚀 Jalankan Optimasi"):
         else:
             st.error("LP tidak menemukan solusi")
 
+
