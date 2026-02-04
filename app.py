@@ -33,6 +33,7 @@ df = st.data_editor(
         "TS (%)": [0.62, 0.55, 0.64, 0.65],
         "Stok (ton)": [255100, 305900, 194850, 200950]
     }),
+    num_rows="dynamic",
     use_container_width=True
 )
 
@@ -160,3 +161,4 @@ if st.button("🚀 Jalankan Optimasi"):
             st.write(f"TS     : {np.sum(TS*x)/Total_ton:.2f}")
         else:
             st.error("LP tidak menemukan solusi")
+
