@@ -163,13 +163,15 @@ if st.button("🚀 Jalankan Optimasi"):
 
         if result_nlp.success:
             x = result_nlp.x
+
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("🔥 Kalori", f"{np.sum(CV*x)/Total_ton:.2f}")
 col2.metric("💧 TM", f"{np.sum(TM*x)/Total_ton:.2f}%")
 col3.metric("🪨 Ash", f"{np.sum(Ash*x)/Total_ton:.2f}%")
 col4.metric("⚗️ TS", f"{np.sum(TS*x)/Total_ton:.2f}%")
-            st.dataframe(pd.DataFrame({
+            
+st.dataframe(pd.DataFrame({
                 "Jenis": names,
                 "Tonase (ton)": x,
                 "Persentase (%)": x / Total_ton * 100
@@ -190,13 +192,15 @@ col4.metric("⚗️ TS", f"{np.sum(TS*x)/Total_ton:.2f}%")
 
         if pulp.LpStatus[model_lp.status] == "Optimal":
             x = np.array([v.value() for v in x_lp])
+
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("🔥 Kalori", f"{np.sum(CV*x)/Total_ton:.2f}")
 col2.metric("💧 TM", f"{np.sum(TM*x)/Total_ton:.2f}%")
 col3.metric("🪨 Ash", f"{np.sum(Ash*x)/Total_ton:.2f}%")
 col4.metric("⚗️ TS", f"{np.sum(TS*x)/Total_ton:.2f}%")
-            st.dataframe(pd.DataFrame({
+           
+st.dataframe(pd.DataFrame({
                 "Jenis": names,
                 "Tonase (ton)": x,
                 "Persentase (%)": x / Total_ton * 100
