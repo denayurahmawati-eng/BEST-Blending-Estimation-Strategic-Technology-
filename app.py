@@ -177,7 +177,7 @@ if run:
         st.download_button("📥 Download CSV", csv, "hasil_blending.csv", "text/csv")
 
     else:
-        st.error("❌ Tidak ditemukan solusi")import streamlit as st
+        st.error("❌ Tidak ditemukan solusi")
 import pandas as pd
 import numpy as np
 import time
