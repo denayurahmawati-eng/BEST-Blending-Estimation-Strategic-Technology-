@@ -2,20 +2,7 @@
 # APLIKASI WEB OPTIMASI BLENDING BATUBARA
 # METODE: LINEAR PROGRAMMING (LP) & NON-LINEAR PROGRAMMING (NLP)
 # =========================================================
-from streamlit_lottie import st_lottie
-import requests
 
-def load_lottie(url):
-    return requests.get(url).json()
-
-lottie = load_lottie("https://assets10.lottiefiles.com/packages/lf20_49rdyysj.json")
-
-col1, col2 = st.columns([1, 2])
-with col1:
-    st_lottie(lottie, height=150)
-with col2:
-    st.title("BEST Dashboard")
-    st.caption("Blending Estimation Strategic Technology")
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -86,7 +73,7 @@ with col3:
 # 3. PROSES OPTIMASI
 # =========================================================
 if st.button("🚀 Jalankan Optimasi"):
- with st.spinner("🚀 Sedang menghitung optimasi..."):
+
     # Ambil data
     CV = df["Kalori (ar)"].values
     TM = df["TM (%)"].values
@@ -121,7 +108,6 @@ if st.button("🚀 Jalankan Optimasi"):
         bounds=bounds_nlp,
         constraints=constraints_nlp,
         method="SLSQP"
-        
     )
 
     # =====================================================
@@ -164,14 +150,7 @@ if st.button("🚀 Jalankan Optimasi"):
         if result_nlp.success:
             x = result_nlp.x
 
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("🔥 Kalori", f"{np.sum(CV*x)/Total_ton:.2f}")
-col2.metric("💧 TM", f"{np.sum(TM*x)/Total_ton:.2f}%")
-col3.metric("🪨 Ash", f"{np.sum(Ash*x)/Total_ton:.2f}%")
-col4.metric("⚗️ TS", f"{np.sum(TS*x)/Total_ton:.2f}%")
-            
-st.dataframe(pd.DataFrame({
+            st.dataframe(pd.DataFrame({
                 "Jenis": names,
                 "Tonase (ton)": x,
                 "Persentase (%)": x / Total_ton * 100
@@ -193,14 +172,7 @@ st.dataframe(pd.DataFrame({
         if pulp.LpStatus[model_lp.status] == "Optimal":
             x = np.array([v.value() for v in x_lp])
 
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("🔥 Kalori", f"{np.sum(CV*x)/Total_ton:.2f}")
-col2.metric("💧 TM", f"{np.sum(TM*x)/Total_ton:.2f}%")
-col3.metric("🪨 Ash", f"{np.sum(Ash*x)/Total_ton:.2f}%")
-col4.metric("⚗️ TS", f"{np.sum(TS*x)/Total_ton:.2f}%")
-           
-st.dataframe(pd.DataFrame({
+            st.dataframe(pd.DataFrame({
                 "Jenis": names,
                 "Tonase (ton)": x,
                 "Persentase (%)": x / Total_ton * 100
