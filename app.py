@@ -112,7 +112,7 @@ Blending Estimation Strategic Technology
 </div>
 
 <div class="hero-subtitle">
-AI-Based Coal Blending Optimization System using
+Advanced Coal Blending Optimization System using
 Linear Programming (LP) and Non-Linear Programming (NLP)
 </div>
 """, unsafe_allow_html=True)
@@ -121,7 +121,7 @@ m1, m2, m3, m4 = st.columns(4)
 with m1:
     st.markdown("""
     <div class="metric-card">
-        <div class="metric-value">4</div>
+        <div class="metric-value">Using</div>
         <div class="metric-label">Coal Sources</div>
     </div>
     """, unsafe_allow_html=True)
@@ -129,7 +129,7 @@ with m1:
 with m2:
     st.markdown("""
     <div class="metric-card">
-        <div class="metric-value">55K</div>
+        <div class="metric-value">Accurate</div>
         <div class="metric-label">Target Tonnage</div>
     </div>
     """, unsafe_allow_html=True)
@@ -137,7 +137,7 @@ with m2:
 with m3:
     st.markdown("""
     <div class="metric-card">
-        <div class="metric-value">4800+</div>
+        <div class="metric-value">Client</div>
         <div class="metric-label">Target CV</div>
     </div>
     """, unsafe_allow_html=True)
@@ -145,7 +145,7 @@ with m3:
 with m4:
     st.markdown("""
     <div class="metric-card">
-        <div class="metric-value">AI</div>
+        <div class="metric-value">Eazy</div>
         <div class="metric-label">Optimization Engine</div>
     </div>
     """, unsafe_allow_html=True)
