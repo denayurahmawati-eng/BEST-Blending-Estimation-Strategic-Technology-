@@ -1,152 +1,155 @@
-# =========================================================
-# PERBANDINGAN LP vs NLP BLENDING BATUBARA
-# + VISUALISASI PARAMETER KUALITAS
-# =========================================================
-
+import streamlit as st
+import pandas as pd
 import numpy as np
-import pulp
-from scipy.optimize import minimize
-import matplotlib.pyplot as plt
+import time
+import plotly.express as px
+from pulp import *
 
-# =========================================================
-# 1. DATA BATUBARA
-# =========================================================
-nama = ["Batubara A", "Batubara B"]
-
-CV = np.array([5100, 4700])        # kcal/kg
-TM = np.array([25.41, 28.69])      # %
-Ash = np.array([3.79, 5.15])       # %
-TS = np.array([0.77, 0.61])        # %
-Stock = np.array([150000, 250000]) # ton
-
-Total_ton = 55000
-
-Target = {
-    "CV_min": 4800,
-    "TM_max": 28,
-    "Ash_max": 8,
-    "TS_max": 0.8
-}
-
-# =========================================================
-# 2. MODEL NLP (Soft Constraint + Penalty λ)
-# =========================================================
-lambda_penalty = 0.10
-
-def objective_nlp(x):
-    cv_blend = np.sum(CV * x) / np.sum(x)
-    penalty = lambda_penalty * np.sum((x - np.mean(x))**2)
-    return -(cv_blend - penalty)
-
-constraints_nlp = [
-    {"type": "eq",   "fun": lambda x: np.sum(x) - Total_ton},
-    {"type": "ineq", "fun": lambda x: Target["TM_max"]  - (np.sum(TM  * x) / np.sum(x))},
-    {"type": "ineq", "fun": lambda x: Target["Ash_max"] - (np.sum(Ash * x) / np.sum(x))},
-    {"type": "ineq", "fun": lambda x: Target["TS_max"]  - (np.sum(TS  * x) / np.sum(x))}
-]
-
-bounds = [(0, Stock[i]) for i in range(len(Stock))]
-x0 = np.array([Total_ton / 2] * 2)
-
-res_nlp = minimize(
-    objective_nlp, x0,
-    bounds=bounds,
-    constraints=constraints_nlp,
-    method="SLSQP"
+# ================== CONFIG ==================
+st.set_page_config(
+    page_title="BEST - Coal Blending",
+    layout="wide",
+    page_icon="⛏️"
 )
 
-x_nlp = res_nlp.x
+# ================== CUSTOM CSS ==================
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+}
 
-# =========================================================
-# 3. MODEL LP (Hard Constraint)
-# =========================================================
-model = pulp.LpProblem("LP_Blending", pulp.LpMaximize)
+h1, h2, h3 {
+    color: #00ADB5;
+}
 
-x_lp = [
-    pulp.LpVariable(f"x_{i}", lowBound=0, upBound=Stock[i])
-    for i in range(len(Stock))
-]
+.block-container {
+    padding-top: 2rem;
+}
 
-# Fungsi tujuan
-model += pulp.lpSum(x_lp[i] * CV[i] for i in range(2))
+/* Card effect */
+.card {
+    background-color: #1c1f26;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 25px rgba(0,0,0,0.4);
+}
 
-# Kendala
-model += pulp.lpSum(x_lp) == Total_ton
-model += pulp.lpSum(x_lp[i] * TM[i]  for i in range(2)) <= Target["TM_max"]  * Total_ton
-model += pulp.lpSum(x_lp[i] * Ash[i] for i in range(2)) <= Target["Ash_max"] * Total_ton
-model += pulp.lpSum(x_lp[i] * TS[i]  for i in range(2)) <= Target["TS_max"]  * Total_ton
-model += pulp.lpSum(x_lp[i] * CV[i]  for i in range(2)) >= Target["CV_min"]  * Total_ton
+/* Button */
+.stButton>button {
+    background-color: #00ADB5;
+    color: white;
+    border-radius: 10px;
+    height: 45px;
+    font-weight: bold;
+}
 
-model.solve(pulp.PULP_CBC_CMD(msg=0))
-x_lp = np.array([v.value() for v in x_lp])
+.stButton>button:hover {
+    background-color: #007B83;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# =========================================================
-# 4. FUNGSI HITUNG KUALITAS
-# =========================================================
-def kualitas(x):
-    return {
-        "CV":  np.sum(CV  * x) / np.sum(x),
-        "TM":  np.sum(TM  * x) / np.sum(x),
-        "Ash": np.sum(Ash * x) / np.sum(x),
-        "TS":  np.sum(TS  * x) / np.sum(x)
-    }
+# ================== HEADER ==================
+st.markdown("""
+<h1 style='text-align: center;'>⛏️ BEST</h1>
+<h4 style='text-align: center;'>Blending Estimation Strategic Technology</h4>
+<hr>
+""", unsafe_allow_html=True)
 
-q_nlp = kualitas(x_nlp)
-q_lp  = kualitas(x_lp)
+# ================== DATA ==================
+data = {
+    "Jenis": ["MT 47-1", "MT 47-3", "BB 51-2", "BB 51-4"],
+    "Kalori": [4528, 4449, 5010, 5026],
+    "TM": [27.87, 28.96, 27.75, 27.78],
+    "Ash": [5.15, 5.66, 4.83, 4.14],
+    "TS": [0.62, 0.55, 0.64, 0.65],
+    "Stok": [255100, 305900, 194850, 200950]
+}
 
-# =========================================================
-# 5. CETAK HASIL NUMERIK
-# =========================================================
-print("\n=========== HASIL NLP ===========")
-for i in range(2):
-    print(f"{nama[i]}: {x_nlp[i]:,.2f} ton ({x_nlp[i]/Total_ton*100:.2f}%)")
+df = pd.DataFrame(data)
 
-print("\nKualitas NLP:")
-for k, v in q_nlp.items():
-    print(f"{k}: {v:.2f}")
+# ================== LAYOUT ==================
+col1, col2 = st.columns([2,1])
 
-print("\n=========== HASIL LP ===========")
-for i in range(2):
-    print(f"{nama[i]}: {x_lp[i]:,.2f} ton ({x_lp[i]/Total_ton*100:.2f}%)")
+with col1:
+    st.markdown("### 📊 Data Batubara")
+    st.dataframe(df, use_container_width=True)
 
-print("\nKualitas LP:")
-for k, v in q_lp.items():
-    print(f"{k}: {v:.2f}")
+with col2:
+    st.markdown("### ⚙️ Parameter Blending")
+    target_kalori = st.number_input("Target Kalori", 4000, 6000, 4800)
+    max_tm = st.number_input("Max TM (%)", 20.0, 35.0, 30.0)
+    max_ash = st.number_input("Max Ash (%)", 1.0, 10.0, 6.0)
+    max_ts = st.number_input("Max TS (%)", 0.1, 1.0, 0.7)
 
-# =========================================================
-# 6. VISUALISASI PER PARAMETER (4 GRAFIK TERPISAH)
-# =========================================================
-labels = ["LP", "NLP"]
-x = np.arange(len(labels))
+# ================== BUTTON ==================
+if st.button("🚀 Jalankan Optimasi"):
 
-# ---- CV ----
-plt.figure()
-plt.bar(x, [q_lp["CV"], q_nlp["CV"]])
-plt.xticks(x, labels)
-plt.ylabel("kcal/kg")
-plt.title("Perbandingan Kalori (CV)")
-plt.show()
+    # Loading animation
+    with st.spinner("🔄 Menghitung blending terbaik..."):
+        progress = st.progress(0)
+        for i in range(100):
+            time.sleep(0.01)
+            progress.progress(i+1)
 
-# ---- TM ----
-plt.figure()
-plt.bar(x, [q_lp["TM"], q_nlp["TM"]])
-plt.xticks(x, labels)
-plt.ylabel("%")
-plt.title("Perbandingan Total Moisture (TM)")
-plt.show()
+    # ================== LP MODEL ==================
+    model = LpProblem("Coal_Blending", LpMaximize)
 
-# ---- TS ----
-plt.figure()
-plt.bar(x, [q_lp["TS"], q_nlp["TS"]])
-plt.xticks(x, labels)
-plt.ylabel("%")
-plt.title("Perbandingan Total Sulfur (TS)")
-plt.show()
+    x = LpVariable.dicts("blend", df.index, lowBound=0)
 
-# ---- Ash ----
-plt.figure()
-plt.bar(x, [q_lp["Ash"], q_nlp["Ash"]])
-plt.xticks(x, labels)
-plt.ylabel("%")
-plt.title("Perbandingan Ash")
-plt.show()
+    # Objective (maximize total tonase)
+    model += lpSum([x[i] for i in df.index])
+
+    total = lpSum([x[i] for i in df.index])
+
+    # Constraints
+    model += lpSum(x[i]*df["Kalori"][i] for i in df.index) / total >= target_kalori
+    model += lpSum(x[i]*df["TM"][i] for i in df.index) / total <= max_tm
+    model += lpSum(x[i]*df["Ash"][i] for i in df.index) / total <= max_ash
+    model += lpSum(x[i]*df["TS"][i] for i in df.index) / total <= max_ts
+
+    # Stock constraint
+    for i in df.index:
+        model += x[i] <= df["Stok"][i]
+
+    model.solve()
+
+    # ================== OUTPUT ==================
+    if model.status == 1:
+
+        result = np.array([x[i].varValue for i in df.index])
+        total_ton = result.sum()
+
+        persen = result / total_ton * 100
+
+        st.markdown("## 📈 Hasil Optimasi")
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            st.success(f"Kalori: {(result*df['Kalori']).sum()/total_ton:.2f}")
+            st.info(f"TM: {(result*df['TM']).sum()/total_ton:.2f}%")
+            st.warning(f"Ash: {(result*df['Ash']).sum()/total_ton:.2f}%")
+            st.error(f"TS: {(result*df['TS']).sum()/total_ton:.2f}%")
+
+        with col4:
+            fig = px.pie(
+                names=df["Jenis"],
+                values=result,
+                title="Komposisi Blending"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Table hasil
+        hasil_df = pd.DataFrame({
+            "Jenis": df["Jenis"],
+            "Tonase": result,
+            "Persentase (%)": persen
+        })
+
+        st.markdown("### 📋 Detail Komposisi")
+        st.dataframe(hasil_df, use_container_width=True)
+
+    else:
+        st.error("❌ Tidak ditemukan solusi blending yang memenuhi constraint")
