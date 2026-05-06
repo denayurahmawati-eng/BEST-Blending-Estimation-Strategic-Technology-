@@ -1,187 +1,165 @@
-# =========================================================
-# APLIKASI WEB OPTIMASI BLENDING BATUBARA
-# METODE: LINEAR PROGRAMMING (LP) & NON-LINEAR PROGRAMMING (NLP)
-# =========================================================
-
 import streamlit as st
-import numpy as np
 import pandas as pd
-import pulp
-from scipy.optimize import minimize
+import numpy as np
+import time
+import plotly.express as px
+from pulp import *
 
-# =========================================================
-# KONFIGURASI HALAMAN
-# =========================================================
+# ================= CONFIG =================
 st.set_page_config(
-    page_title="Optimasi Blending Batubara",
-    layout="wide"
+    page_title="BEST - Coal Blending",
+    layout="wide",
+    page_icon="⛏️"
 )
 
-st.title("Selamat Datang di BEST (Blending Estimation Strategic Technology)")
-st.markdown(
-    "Menggunakan metode **Linear Programming (LP)** dan "
-    "**Non-Linear Programming (NLP)**"
-)
+# ================= CSS =================
+st.markdown("""
+<style>
+body {background-color: #0e1117;}
+h1, h2, h3 {color: #00ADB5;}
+.block-container {padding-top: 2rem;}
 
-# =========================================================
-# 1. INPUT DATA
-# =========================================================
-st.subheader("📋 Data Kualitas Batubara")
+.stButton>button {
+    background-color: #00ADB5;
+    color: white;
+    border-radius: 10px;
+    height: 45px;
+    font-weight: bold;
+}
+.stButton>button:hover {
+    background-color: #007B83;
+}
+</style>
+""", unsafe_allow_html=True)
 
-df = st.data_editor(
-    pd.DataFrame({
-        "Jenis": [
-            "MT 47-STOCK 1",
-            "MT 47-STOCK 3",
-            "BB 51-STOCK 2",
-            "BB 51-STOCK 4"
-        ],
-        "Kalori (ar)": [4528, 4449, 5010, 5026],
-        "TM (%)": [27.87, 28.96, 27.75, 27.78],
-        "Ash (%)": [5.15, 5.66, 4.83, 4.14],
-        "TS (%)": [0.62, 0.55, 0.64, 0.65],
-        "Stok (ton)": [255100, 305900, 194850, 200950]
-    }),
-    use_container_width=True
-)
+# ================= HEADER =================
+st.markdown("""
+<h1 style='text-align: center;'>⛏️ BEST</h1>
+<h4 style='text-align: center;'>Blending Estimation Strategic Technology</h4>
+<hr>
+""", unsafe_allow_html=True)
 
-if df.isnull().values.any():
-    st.warning("⚠️ Data belum lengkap")
-    st.stop()
+# ================= DEFAULT DATA =================
+default_data = pd.DataFrame({
+    "Jenis": ["MT 47-1", "MT 47-3", "BB 51-2", "BB 51-4"],
+    "Kalori": [4528, 4449, 5010, 5026],
+    "TM": [27.87, 28.96, 27.75, 27.78],
+    "Ash": [5.15, 5.66, 4.83, 4.14],
+    "TS": [0.62, 0.55, 0.64, 0.65],
+    "Stok": [255100, 305900, 194850, 200950]
+})
 
-# =========================================================
-# 2. TARGET BLENDING
-# =========================================================
-st.subheader("🎯 Target Spesifikasi")
+# ================= SESSION STATE =================
+if "df" not in st.session_state:
+    st.session_state.df = default_data.copy()
 
-col1, col2, col3 = st.columns(3)
+# ================= LAYOUT =================
+col1, col2 = st.columns([2,1])
 
+# ================= DATA INPUT =================
 with col1:
-    Target_CV_min = st.number_input("Target Kalori Minimum", 4500, 6000, 4800)
-    Total_ton = st.number_input("Total Tonase (ton)", 10000, 500000, 55000)
+    st.markdown("### 📊 Data Batubara")
 
-with col2:
-    Target_TM_max = st.number_input("TM Maksimum (%)", 20.0, 35.0, 28.0)
-    Target_Ash_max = st.number_input("Ash Maksimum (%)", 2.0, 15.0, 8.0)
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
-with col3:
-    Target_TS_max = st.number_input("TS Maksimum (%)", 0.2, 2.0, 0.8)
-    min_fraction = st.slider("Fraksi Minimum LP (%)", 0, 20, 10) / 100
+    if uploaded_file:
+        st.session_state.df = pd.read_csv(uploaded_file)
 
-# =========================================================
-# 3. PROSES OPTIMASI
-# =========================================================
-if st.button("🚀 Jalankan Optimasi"):
-
-    # Ambil data
-    CV = df["Kalori (ar)"].values
-    TM = df["TM (%)"].values
-    Ash = df["Ash (%)"].values
-    TS = df["TS (%)"].values
-    Stock = df["Stok (ton)"].values
-    names = df["Jenis"].values
-    n = len(df)
-
-    # =====================================================
-    # A. NON-LINEAR PROGRAMMING (NLP)
-    # =====================================================
-    def objective_nlp(x):
-        total_cv = np.sum(CV * x) / np.sum(x)
-        penalty = 0.10 * np.sum((x - np.mean(x)) ** 2)
-        return -(total_cv - penalty)
-
-    constraints_nlp = [
-        {'type': 'eq', 'fun': lambda x: np.sum(x) - Total_ton},
-        {'type': 'ineq', 'fun': lambda x: Target_TM_max - np.sum(TM * x) / np.sum(x)},
-        {'type': 'ineq', 'fun': lambda x: Target_Ash_max - np.sum(Ash * x) / np.sum(x)},
-        {'type': 'ineq', 'fun': lambda x: Target_TS_max - np.sum(TS * x) / np.sum(x)},
-        {'type': 'ineq', 'fun': lambda x: np.sum(CV * x) / np.sum(x) - Target_CV_min}
-    ]
-
-    bounds_nlp = [(0, Stock[i]) for i in range(n)]
-    x0 = np.array([Total_ton / n] * n)
-
-    result_nlp = minimize(
-        objective_nlp,
-        x0,
-        bounds=bounds_nlp,
-        constraints=constraints_nlp,
-        method="SLSQP"
+    st.session_state.df = st.data_editor(
+        st.session_state.df,
+        num_rows="dynamic",
+        use_container_width=True
     )
 
-    # =====================================================
-    # B. LINEAR PROGRAMMING (LP)
-    # =====================================================
-    model_lp = pulp.LpProblem("Blending_Batubara_LP", pulp.LpMaximize)
+    if st.button("🔄 Reset Data"):
+        st.session_state.df = default_data.copy()
 
-    x_lp = [
-        pulp.LpVariable(
-            f"x_{i}",
-            lowBound=min_fraction * Total_ton,
-            upBound=Stock[i]
-        )
-        for i in range(n)
-    ]
+# ================= PARAMETER =================
+with col2:
+    st.markdown("### ⚙️ Parameter Blending")
 
-    # Fungsi objektif
-    model_lp += pulp.lpSum(x_lp[i] * CV[i] for i in range(n))
+    target_kalori = st.number_input("Target Kalori", 4000, 6000, 4800)
+    max_tm = st.number_input("Max TM (%)", 0.0, 50.0, 30.0)
+    max_ash = st.number_input("Max Ash (%)", 0.0, 20.0, 6.0)
+    max_ts = st.number_input("Max TS (%)", 0.0, 5.0, 0.7)
 
-    # Kendala
-    model_lp += pulp.lpSum(x_lp) == Total_ton
-    model_lp += pulp.lpSum(x_lp[i] * TM[i] for i in range(n)) <= Target_TM_max * Total_ton
-    model_lp += pulp.lpSum(x_lp[i] * Ash[i] for i in range(n)) <= Target_Ash_max * Total_ton
-    model_lp += pulp.lpSum(x_lp[i] * TS[i] for i in range(n)) <= Target_TS_max * Total_ton
-    model_lp += pulp.lpSum(x_lp[i] * CV[i] for i in range(n)) >= Target_CV_min * Total_ton
+# ================= VALIDASI =================
+df = st.session_state.df
 
-    model_lp.solve(pulp.PULP_CBC_CMD(msg=0))
+if df.empty:
+    st.error("❌ Data kosong!")
+    st.stop()
 
-    # =====================================================
-    # 4. OUTPUT
-    # =====================================================
-    st.subheader("📊 Hasil Optimasi")
+if df.isnull().values.any():
+    st.error("❌ Data tidak boleh kosong!")
+    st.stop()
 
-    colA, colB = st.columns(2)
+# ================= BUTTON =================
+if st.button("🚀 Jalankan Optimasi"):
 
-    # ================= NLP OUTPUT =================
-    with colA:
-        st.markdown("### 🔵 NLP (Non-Linear Programming)")
+    with st.spinner("🔄 Menghitung blending terbaik..."):
+        progress = st.progress(0)
+        for i in range(100):
+            time.sleep(0.01)
+            progress.progress(i+1)
 
-        if result_nlp.success:
-            x = result_nlp.x
+    try:
+        # ================= MODEL =================
+        model = LpProblem("Coal_Blending", LpMaximize)
 
-            st.dataframe(pd.DataFrame({
-                "Jenis": names,
-                "Tonase (ton)": x,
-                "Persentase (%)": x / Total_ton * 100
-            }), use_container_width=True)
+        x = LpVariable.dicts("blend", range(len(df)), lowBound=0)
 
-            st.write("**Kualitas Campuran NLP**")
-            st.write(f"Kalori : {np.sum(CV * x) / np.sum(x):.2f}")
-            st.write(f"TM     : {np.sum(TM * x) / np.sum(x):.2f}")
-            st.write(f"Ash    : {np.sum(Ash * x) / np.sum(x):.2f}")
-            st.write(f"TS     : {np.sum(TS * x) / np.sum(x):.2f}")
+        total = lpSum([x[i] for i in range(len(df))])
+
+        model += total
+
+        model += lpSum(x[i]*df.loc[i, "Kalori"] for i in range(len(df))) / total >= target_kalori
+        model += lpSum(x[i]*df.loc[i, "TM"] for i in range(len(df))) / total <= max_tm
+        model += lpSum(x[i]*df.loc[i, "Ash"] for i in range(len(df))) / total <= max_ash
+        model += lpSum(x[i]*df.loc[i, "TS"] for i in range(len(df))) / total <= max_ts
+
+        for i in range(len(df)):
+            model += x[i] <= df.loc[i, "Stok"]
+
+        model.solve()
+
+        # ================= OUTPUT =================
+        if model.status == 1:
+
+            result = np.array([x[i].varValue for i in range(len(df))])
+            total_ton = result.sum()
+
+            persen = result / total_ton * 100
+
+            st.markdown("## 📈 Hasil Optimasi")
+
+            col3, col4 = st.columns(2)
+
+            with col3:
+                st.success(f"Kalori: {(result*df['Kalori']).sum()/total_ton:.2f}")
+                st.info(f"TM: {(result*df['TM']).sum()/total_ton:.2f}%")
+                st.warning(f"Ash: {(result*df['Ash']).sum()/total_ton:.2f}%")
+                st.error(f"TS: {(result*df['TS']).sum()/total_ton:.2f}%")
+
+            with col4:
+                fig = px.pie(
+                    names=df["Jenis"],
+                    values=result,
+                    title="Komposisi Blending"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            hasil_df = pd.DataFrame({
+                "Jenis": df["Jenis"],
+                "Tonase": result,
+                "Persentase (%)": persen
+            })
+
+            st.markdown("### 📋 Detail Komposisi")
+            st.dataframe(hasil_df, use_container_width=True)
 
         else:
-            st.error("NLP tidak menemukan solusi")
+            st.error("❌ Tidak ditemukan solusi blending")
 
-    # ================= LP OUTPUT =================
-    with colB:
-        st.markdown("### 🟢 LP (Linear Programming)")
-
-        if pulp.LpStatus[model_lp.status] == "Optimal":
-            x = np.array([v.value() for v in x_lp])
-
-            st.dataframe(pd.DataFrame({
-                "Jenis": names,
-                "Tonase (ton)": x,
-                "Persentase (%)": x / Total_ton * 100
-            }), use_container_width=True)
-
-            st.write("**Kualitas Campuran LP**")
-            st.write(f"Kalori : {np.sum(CV * x) / Total_ton:.2f}")
-            st.write(f"TM     : {np.sum(TM * x) / Total_ton:.2f}")
-            st.write(f"Ash    : {np.sum(Ash * x) / Total_ton:.2f}")
-            st.write(f"TS     : {np.sum(TS * x) / Total_ton:.2f}")
-
-        else:
-            st.error("LP tidak menemukan solusi")
+    except Exception as e:
+        st.error(f"Terjadi error: {e}")
