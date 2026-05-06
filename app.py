@@ -3,8 +3,6 @@
 # Gabungan Model LP & NLP DENGAN VISUALISASI HASIL
 # =========================================================
 
-import streamlit as st
-import time
 import numpy as np
 import pulp
 from scipy.optimize import minimize
