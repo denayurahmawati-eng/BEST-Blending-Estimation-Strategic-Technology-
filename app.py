@@ -288,6 +288,53 @@ if st.button("🚀 Jalankan Optimasi"):
             st.write(f"TM     : {np.sum(TM * x) / np.sum(x):.2f}")
             st.write(f"Ash    : {np.sum(Ash * x) / np.sum(x):.2f}")
             st.write(f"TS     : {np.sum(TS * x) / np.sum(x):.2f}")
+                        # =====================================================
+            # DIAGRAM NLP
+            # =====================================================
+
+            st.markdown("### 📈 Diagram NLP")
+
+            # Pie Chart NLP
+            fig_pie_nlp = px.pie(
+                values=x,
+                names=names,
+                title="Komposisi Blending NLP",
+                hole=0.45
+            )
+
+            fig_pie_nlp.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color='white'
+            )
+
+            st.plotly_chart(fig_pie_nlp, use_container_width=True)
+
+            # Bar Chart NLP
+            quality_nlp = pd.DataFrame({
+                "Parameter": ["Kalori", "TM", "Ash", "TS"],
+                "Nilai": [
+                    np.sum(CV * x) / np.sum(x),
+                    np.sum(TM * x) / np.sum(x),
+                    np.sum(Ash * x) / np.sum(x),
+                    np.sum(TS * x) / np.sum(x)
+                ]
+            })
+
+            fig_bar_nlp = px.bar(
+                quality_nlp,
+                x="Parameter",
+                y="Nilai",
+                title="Kualitas Hasil Blending NLP"
+            )
+
+            fig_bar_nlp.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color='white'
+            )
+
+            st.plotly_chart(fig_bar_nlp, use_container_width=True)
 
         else:
             st.error("NLP tidak menemukan solusi")
@@ -310,6 +357,53 @@ if st.button("🚀 Jalankan Optimasi"):
             st.write(f"TM     : {np.sum(TM * x) / Total_ton:.2f}")
             st.write(f"Ash    : {np.sum(Ash * x) / Total_ton:.2f}")
             st.write(f"TS     : {np.sum(TS * x) / Total_ton:.2f}")
+                        # =====================================================
+            # DIAGRAM LP
+            # =====================================================
+
+            st.markdown("### 📊 Diagram LP")
+
+            # Pie Chart LP
+            fig_pie_lp = px.pie(
+                values=x,
+                names=names,
+                title="Komposisi Blending LP",
+                hole=0.45
+            )
+
+            fig_pie_lp.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color='white'
+            )
+
+            st.plotly_chart(fig_pie_lp, use_container_width=True)
+
+            # Bar Chart LP
+            quality_lp = pd.DataFrame({
+                "Parameter": ["Kalori", "TM", "Ash", "TS"],
+                "Nilai": [
+                    np.sum(CV * x) / Total_ton,
+                    np.sum(TM * x) / Total_ton,
+                    np.sum(Ash * x) / Total_ton,
+                    np.sum(TS * x) / Total_ton
+                ]
+            })
+
+            fig_bar_lp = px.bar(
+                quality_lp,
+                x="Parameter",
+                y="Nilai",
+                title="Kualitas Hasil Blending LP"
+            )
+
+            fig_bar_lp.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color='white'
+            )
+
+            st.plotly_chart(fig_bar_lp, use_container_width=True)
 
         else:
             st.error("LP tidak menemukan solusi")
