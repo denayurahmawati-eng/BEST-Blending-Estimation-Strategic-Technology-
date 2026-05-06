@@ -9,19 +9,146 @@ import pandas as pd
 import pulp
 from scipy.optimize import minimize
 
+# UI MODERN
+import plotly.express as px
+import plotly.graph_objects as go
+from streamlit_option_menu import option_menu
+
 # =========================================================
 # KONFIGURASI HALAMAN
 # =========================================================
 st.set_page_config(
-    page_title="Optimasi Blending Batubara",
-    layout="wide"
+    page_title="BEST - Coal Blending Optimization",
+    layout="wide",
+    page_icon="⚡",
+    initial_sidebar_state="expanded"
 )
+st.markdown("""
+<style>
 
-st.title("Selamat Datang di BEST (Blending Estimation Strategic Technology)")
-st.markdown(
-    "Menggunakan metode **Linear Programming (LP)** dan "
-    "**Non-Linear Programming (NLP)**"
-)
+.stApp {
+    background: linear-gradient(
+        135deg,
+        #050816 0%,
+        #0b1120 45%,
+        #111827 100%
+    );
+    color: white;
+}
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+.hero-title {
+    font-size: 60px;
+    font-weight: 800;
+    background: linear-gradient(90deg,#ffffff,#60a5fa,#38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+    margin-bottom: 15px;
+}
+
+.hero-subtitle {
+    color: #94a3b8;
+    font-size: 18px;
+    margin-bottom: 40px;
+}
+
+.metric-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 22px;
+    padding: 25px;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: 0.3s;
+}
+
+.metric-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 0 25px rgba(56,189,248,0.25);
+}
+
+.metric-value {
+    font-size: 34px;
+    font-weight: 700;
+    color: #38bdf8;
+}
+
+.metric-label {
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.stButton > button {
+    background: linear-gradient(
+        90deg,
+        #2563eb,
+        #38bdf8
+    );
+
+    color: white;
+    border: none;
+    border-radius: 14px;
+    height: 3.3em;
+    width: 100%;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.stButton > button:hover {
+    box-shadow: 0 0 20px rgba(56,189,248,0.4);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="hero-title">
+BEST<br>
+Blending Estimation Strategic Technology
+</div>
+
+<div class="hero-subtitle">
+AI-Based Coal Blending Optimization System using
+Linear Programming (LP) and Non-Linear Programming (NLP)
+</div>
+""", unsafe_allow_html=True)
+m1, m2, m3, m4 = st.columns(4)
+
+with m1:
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-value">4</div>
+        <div class="metric-label">Coal Sources</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m2:
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-value">55K</div>
+        <div class="metric-label">Target Tonnage</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m3:
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-value">4800+</div>
+        <div class="metric-label">Target CV</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with m4:
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-value">AI</div>
+        <div class="metric-label">Optimization Engine</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # =========================================================
 # 1. INPUT DATA
