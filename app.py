@@ -1,262 +1,153 @@
-# =========================================================
-# OPTIMASI BLENDING BATUBARA UNTUK EKSPOR BANGLADESH
-# Gabungan Model LP & NLP DENGAN VISUALISASI HASIL
-# =========================================================
+"""
+coal_blending_lp.py
+Model LP blending batubara: baca input.xlsx -> solve -> simpan hasil ke output.xlsx
+Dependencies: pandas, pulp, openpyxl
+Install: pip install pandas pulp openpyxl
+"""
 
-import numpy as np
-import pulp
-from scipy.optimize import minimize
 import pandas as pd
-import matplotlib.pyplot as plt
+import pulp
+import os
 
-# ---------------------------------------------------------
-# 1. Data Batubara
-# ---------------------------------------------------------
-# Data untuk NLP (numpy array)
-CV_NLP = np.array([4528, 4449, 5010, 5026])      # Kalori (ar)
-TM_NLP = np.array([27.87, 28.96, 27.75, 27.78])  # Total Moisture (%)
-Ash_NLP = np.array([5.15, 5.66, 4.83, 4.14])     # Abu (%)
-TS_NLP = np.array([0.62, 0.55, 0.64, 0.65])      # Total Sulfur (%)
-Stock_NLP = np.array([255100, 305900, 194850, 200950])  # Stok tersedia (ton)
-Batubara_Names = ['MT 47-STOCK 1', 'MT 47-STOCK 3','BB 51-STOCK 2', 'BB 51-STOCK 4']
+# ---------- Config / File names ----------
+INPUT_FILE = "input.xlsx"
+OUTPUT_FILE = "output_results.xlsx"
 
-# Data untuk LP (Pandas DataFrame)
-data_LP = {
-    'Nama': Batubara_Names,
-    'Kalori_ar': [4528, 4449, 5010, 5026],
-    'TM_ar': [27.87, 28.96, 27.75, 27.78],
-    'Ash_adb': [5.15, 5.66, 4.83, 4.14],
-    'TS_adb': [0.62, 0.55, 0.64, 0.65],
-    'Stock': [255100, 305900, 194850, 200950] 
+# ---------- Example data fallback (used if input.xlsx tidak ada) ----------
+example_stocks = pd.DataFrame([
+    {"Name": "A", "Calorific": 5100, "Ash": 3.79, "Sulfur": 0.77, "Moisture": 27.41, "AvailableTon": 10000},
+    {"Name": "B", "Calorific": 4700, "Ash": 4.17,  "Sulfur": 0.61, "Moisture": 31.69, "AvailableTon": 15000},
+
+])
+
+example_targets = {
+    "DemandTon": 55000,
+    "Calorific_min": 4800,
+    "Ash_max": 8.0,
+    "Sulfur_max": 0.8,
+    "Moisture_max": 12.0
 }
-df_LP = pd.DataFrame(data_LP)
 
-# Target spesifikasi (konsisten untuk kedua model)
-Target_CV_min = 4800
-Target_TM_max = 28.0
-Target_Ash_max = 8.0
-Target_TS_max = 0.8
-Total_ton = 55000
-min_fraction_LP = 0.10 # Batasan minimal proporsi untuk model LP
-
-# Variabel global untuk menyimpan hasil
-results_comp = {}
-
-# =========================================================
-# A. OPTIMASI NON-LINEAR PROGRAMMING (NLP)
-# =========================================================
-
-# ---------------------------------------------
-# 2. Fungsi Tujuan NLP (Memaksimalkan Kalori rata-rata - Penalti Variasi)
-# ---------------------------------------------
-def objective_nlp(x):
-    total_cv = np.sum(CV_NLP * x) / np.sum(x)
-    penalty = 0.10 * np.sum((x - np.mean(x))**2)
-    return -(total_cv - penalty)
-
-# ---------------------------------------------
-# 3. Fungsi Kendala NLP
-# ---------------------------------------------
-def total_constraint(x):
-    return np.sum(x) - Total_ton
-
-def tm_constraint_nlp(x):
-    return Target_TM_max - (np.sum(TM_NLP * x) / np.sum(x))
-
-def ash_constraint_nlp(x):
-    return Target_Ash_max - (np.sum(Ash_NLP * x) / np.sum(x))
-
-def ts_constraint_nlp(x):
-    return Target_TS_max - (np.sum(TS_NLP * x) / np.sum(x))
-
-def cv_constraint_nlp(x):
-    return (np.sum(CV_NLP * x) / np.sum(x)) - Target_CV_min
-
-constraints_nlp = [
-    {'type': 'eq', 'fun': total_constraint},
-    {'type': 'ineq', 'fun': tm_constraint_nlp},
-    {'type': 'ineq', 'fun': ash_constraint_nlp},
-    {'type': 'ineq', 'fun': ts_constraint_nlp},
-    {'type': 'ineq', 'fun': cv_constraint_nlp} 
-]
-
-bounds_nlp = [(0, Stock_NLP[i]) for i in range(len(Stock_NLP))]
-x0_nlp = np.array([Total_ton / len(CV_NLP)] * len(CV_NLP)) 
-
-# ---------------------------------------------
-# 4. Jalankan Optimasi NLP
-# ---------------------------------------------
-result_nlp = minimize(objective_nlp, x0_nlp, bounds=bounds_nlp, constraints=constraints_nlp, method='SLSQP')
-
-print("="*60)
-print("             HASIL OPTIMASI BLENDING (NON-LINEAR)")
-print("============================================================")
-
-if result_nlp.success:
-    x_opt_nlp = result_nlp.x
-    total_cv_nlp = np.sum(CV_NLP * x_opt_nlp) / np.sum(x_opt_nlp)
-    total_tm_nlp = np.sum(TM_NLP * x_opt_nlp) / np.sum(x_opt_nlp)
-    total_ash_nlp = np.sum(Ash_NLP * x_opt_nlp) / np.sum(x_opt_nlp)
-    total_ts_nlp = np.sum(TS_NLP * x_opt_nlp) / np.sum(x_opt_nlp)
-    
-    # Simpan hasil NLP
-    results_comp['NLP'] = {
-        'CV': total_cv_nlp, 'TM': total_tm_nlp, 
-        'Ash': total_ash_nlp, 'TS': total_ts_nlp
-    }
-
-    print("\n=== Proporsi Batubara (NLP) ===")
-    for i, ton in enumerate(x_opt_nlp):
-        nama = f"{Batubara_Names[i]} (Stok: {Stock_NLP[i]:,})"
-        print(f"{nama}: {ton:,.2f} ton ({ton/Total_ton*100:.2f}%)")
-
-    print("\n=== KUALITAS CAMPURAN AKHIR (NLP) ===")
-    print(f"Kalori (ar): {total_cv_nlp:.2f} kcal/kg (Target: >= {Target_CV_min})")
-    print(f"Total Moisture: {total_tm_nlp:.2f} % (Target: <= {Target_TM_max})")
-    print(f"Ash: {total_ash_nlp:.2f} % (Target: <= {Target_Ash_max})")
-    print(f"Total Sulfur: {total_ts_nlp:.2f} % (Target: <= {Target_TS_max})")
-
+# ---------- Read input.xlsx if exists ----------
+if os.path.exists(INPUT_FILE):
+    try:
+        stocks = pd.read_excel(INPUT_FILE, sheet_name="stocks")
+    except Exception as e:
+        raise RuntimeError(f"Gagal membaca sheet 'stocks' dari {INPUT_FILE}: {e}")
+    # read targets sheet if present
+    try:
+        targets_df = pd.read_excel(INPUT_FILE, sheet_name="targets")
+        targets = {row['TargetName']: row['Value'] for _, row in targets_df.iterrows()}
+    except Exception:
+        targets = example_targets.copy()
+        print("Sheet 'targets' tidak ditemukan atau tidak valid -> menggunakan default contoh.")
 else:
-    print("❌ Tidak ditemukan solusi optimal NLP. Periksa batasan atau data input.")
-    results_comp['NLP'] = {'CV': np.nan, 'TM': np.nan, 'Ash': np.nan, 'TS': np.nan}
+    print(f"{INPUT_FILE} tidak ditemukan. Menggunakan data contoh internal.")
+    stocks = example_stocks.copy()
+    targets = example_targets.copy()
 
+# Basic validation
+required_cols = {"Name", "Calorific", "Ash", "Sulfur", "Moisture", "AvailableTon"}
+if not required_cols.issubset(set(stocks.columns)):
+    missing = required_cols - set(stocks.columns)
+    raise ValueError(f"Kolom hilang di sheet 'stocks': {missing}")
 
-# =========================================================
-# B. OPTIMASI LINEAR PROGRAMMING (LP)
-# =========================================================
+# ---------- Parameter ----------
+names = list(stocks['Name'])
+cal = dict(zip(names, stocks['Calorific']))
+ash = dict(zip(names, stocks['Ash']))
+sulfur = dict(zip(names, stocks['Sulfur']))
+moist = dict(zip(names, stocks['Moisture']))
+avail = dict(zip(names, stocks['AvailableTon']))
 
-# ---------------------------------------------------------
-# 5. Inisialisasi dan Kendala LP
-# ---------------------------------------------------------
-model_lp = pulp.LpProblem("Blending_Batubara_LP", pulp.LpMaximize)
-n_batubara = len(df_LP)
-x_lp = [pulp.LpVariable(f"x_{i+1}", lowBound=0, upBound=df_LP.loc[i, 'Stock']) for i in range(n_batubara)]
+demand = float(targets.get("DemandTon", example_targets["DemandTon"]))
+cal_min = float(targets.get("Calorific_min", example_targets["Calorific_min"]))
+ash_max = float(targets.get("Ash_max", example_targets["Ash_max"]))
+sulfur_max = float(targets.get("Sulfur_max", example_targets["Sulfur_max"]))
+moist_max = float(targets.get("Moisture_max", example_targets["Moisture_max"]))
 
-# Fungsi Tujuan LP: Maksimalkan Total Kalori
-model_lp += pulp.lpSum(x_lp[i] * df_LP.loc[i, 'Kalori_ar'] for i in range(n_batubara)), "Maksimalkan_Total_Kalori"
+# ---------- Model LP ----------
+model = pulp.LpProblem("Coal_Blending", pulp.LpMinimize)
 
-# Kendala
-model_lp += pulp.lpSum(x_lp[i] for i in range(n_batubara)) == Total_ton, "Total_Tonase"
-model_lp += pulp.lpSum(x_lp[i] * df_LP.loc[i, 'TM_ar'] for i in range(n_batubara)) <= Target_TM_max * Total_ton, "Batas_TM"
-model_lp += pulp.lpSum(x_lp[i] * df_LP.loc[i, 'Ash_adb'] for i in range(n_batubara)) <= Target_Ash_max * Total_ton, "Batas_Ash"
-model_lp += pulp.lpSum(x_lp[i] * df_LP.loc[i, 'TS_adb'] for i in range(n_batubara)) <= Target_TS_max * Total_ton, "Batas_TS"
-model_lp += pulp.lpSum(x_lp[i] * df_LP.loc[i, 'Kalori_ar'] for i in range(n_batubara)) >= Target_CV_min * Total_ton, "Batas_Kalori"
+# Decision variables: proportion by ton (tons of each coal to use)
+# We will model in TON basis: y_i = ton of coal i used. Then sum y_i = demand
+y = {i: pulp.LpVariable(f"ton_{i}", lowBound=0, upBound=avail[i], cat="Continuous") for i in names}
 
-min_ton_lp = min_fraction_LP * Total_ton
-for i in range(n_batubara):
-    model_lp += x_lp[i] >= min_ton_lp, f"Minimal_{df_LP.loc[i, 'Nama']}"
+# Constraints:
+# 1) Meet demand (tons)
+model += pulp.lpSum([y[i] for i in names]) == demand, "DemandConstraint"
 
-# ---------------------------------------------------------
-# 6. Jalankan Optimasi LP
-# ---------------------------------------------------------
-model_lp.solve(pulp.PULP_CBC_CMD(msg=0))
+# 2) Quality constraints (weighted average)
+# average_calorific = sum(cal_i * y_i) / demand >= cal_min
+model += pulp.lpSum([cal[i] * y[i] for i in names]) >= cal_min * demand, "Calorific_min"
 
-# ---------------------------------------------------------
-# 7. Tampilkan Hasil LP
-# ---------------------------------------------------------
-print("\n" + "="*60)
-print("              HASIL OPTIMASI BLENDING (LINEAR)")
-print("============================================================")
+# ash average <= ash_max
+model += pulp.lpSum([ash[i] * y[i] for i in names]) <= ash_max * demand, "Ash_max"
 
-if pulp.LpStatus[model_lp.status] == 'Optimal':
-    x_opt_lp = [x.value() for x in x_lp]
+# sulfur average <= sulfur_max
+model += pulp.lpSum([sulfur[i] * y[i] for i in names]) <= sulfur_max * demand, "Sulfur_max"
 
-    total_cv_lp = sum(x_opt_lp[i] * df_LP.loc[i, 'Kalori_ar'] for i in range(n_batubara)) / Total_ton
-    total_tm_lp = sum(x_opt_lp[i] * df_LP.loc[i, 'TM_ar'] for i in range(n_batubara)) / Total_ton
-    total_ash_lp = sum(x_opt_lp[i] * df_LP.loc[i, 'Ash_adb'] for i in range(n_batubara)) / Total_ton
-    total_ts_lp = sum(x_opt_lp[i] * df_LP.loc[i, 'TS_adb'] for i in range(n_batubara)) / Total_ton
+# moisture average <= moist_max
+model += pulp.lpSum([moist[i] * y[i] for i in names]) <= moist_max * demand, "Moisture_max"
 
-    # Simpan hasil LP
-    results_comp['LP'] = {
-        'CV': total_cv_lp, 'TM': total_tm_lp, 
-        'Ash': total_ash_lp, 'TS': total_ts_lp
-    }
-    
-    print("\n=== Proporsi Batubara (LP) ===")
-    for i in range(n_batubara):
-        tonase = x_opt_lp[i]
-        persen = (tonase / Total_ton) * 100
-        nama = f"{df_LP.loc[i, 'Nama']} (Stok: {df_LP.loc[i, 'Stock']:,})"
-        print(f"{nama}: {tonase:,.2f} ton ({persen:.2f}%)")
+# (Optional) You can add min usage constraints, integer constraints, or blending group constraints here.
 
-    print("\n=== KUALITAS BLENDING CAMPURAN (LP) ===")
-    print(f"Kalori (ar): {total_cv_lp:.2f} kcal/kg (Target: >= {Target_CV_min})")
-    print(f"Total Moisture (ar): {total_tm_lp:.2f} % (Target: <= {Target_TM_max})")
-    print(f"Ash (adb): {total_ash_lp:.2f} % (Target: <= {Target_Ash_max})")
-    print(f"Total Sulfur (adb): {total_ts_lp:.2f} % (Target: <= {Target_TS_max})")
-    print("\n✅ Optimasi LP dan NLP selesai.")
-    
-else:
-    print("❌ Tidak ditemukan solusi optimal LP. Periksa batasan atau data input.")
-    results_comp['LP'] = {'CV': np.nan, 'TM': np.nan, 'Ash': np.nan, 'TS': np.nan}
+# ---------- Solve ----------
+# Default solver is CBC (included with pulp). If you have Gurobi/CPLEX, pulp will use it if configured.
+solver = pulp.PULP_CBC_CMD(msg=True, timeLimit=60)
+res = model.solve(solver)
 
+status = pulp.LpStatus[model.status]
+print("Solver status:", status)
 
-# =========================================================
-# C. VISUALISASI PERBANDINGAN HASIL
-# =========================================================
+# ---------- Collect results ----------
+if status != "Optimal":
+    print("Peringatan: solusi tidak optimal. Status:", status)
 
-def plot_comparison(results, targets):
-    """Membuat 4 grafik batang terpisah untuk perbandingan kualitas."""
-    
-    if not all(k in results for k in ['LP', 'NLP']):
-        print("\n⚠️ Tidak dapat membuat grafik: Hasil dari salah satu model tidak tersedia.")
-        return
+result_tons = {i: y[i].value() if y[i].value() is not None else 0.0 for i in names}
+# convert to proportions
+result_prop = {i: (result_tons[i] / demand) if demand > 0 else 0.0 for i in names}
 
-    df_results = pd.DataFrame(results).T
-    
-    # 1. CV (Maksimalkan, target minimum)
-    plt.figure(figsize=(10, 5))
-    plt.bar(df_results.index, df_results['CV'], color=['#4CAF50', '#2196F3'])
-    plt.axhline(targets['CV_min'], color='r', linestyle='--', label=f'Target Min ({targets["CV_min"]})')
-    plt.title('1. Perbandingan Kalori (CV) Campuran (kcal/kg)')
-    plt.ylabel('Kalori (ar)')
-    plt.ylim(min(df_results['CV']) - 50, max(df_results['CV']) + 50)
-    plt.legend()
-    plt.grid(axis='y', linestyle=':')
-    for i, val in enumerate(df_results['CV']):
-        plt.text(i, val + 5, f'{val:.2f}', ha='center', fontweight='bold')
-    
-    # 2. TM (Minimalkan, target maksimum)
-    plt.figure(figsize=(10, 5))
-    plt.bar(df_results.index, df_results['TM'], color=['#FF9800', '#FFC107'])
-    plt.axhline(targets['TM_max'], color='r', linestyle='--', label=f'Target Max ({targets["TM_max"]})')
-    plt.title('2. Perbandingan Total Moisture (TM) Campuran (%)')
-    plt.ylabel('Total Moisture (%)')
-    plt.ylim(min(df_results['TM']) - 1, targets['TM_max'] + 1)
-    plt.legend()
-    plt.grid(axis='y', linestyle=':')
-    for i, val in enumerate(df_results['TM']):
-        plt.text(i, val + 0.1, f'{val:.2f}', ha='center', fontweight='bold')
-        
-    # 3. TS (Minimalkan, target maksimum)
-    plt.figure(figsize=(10, 5))
-    plt.bar(df_results.index, df_results['TS'], color=['#9C27B0', '#E1BEE7'])
-    plt.axhline(targets['TS_max'], color='r', linestyle='--', label=f'Target Max ({targets["TS_max"]})')
-    plt.title('3. Perbandingan Total Sulfur (TS) Campuran (%)')
-    plt.ylabel('Total Sulfur (%)')
-    plt.ylim(0.5, targets['TS_max'] + 0.1)
-    plt.legend()
-    plt.grid(axis='y', linestyle=':')
-    for i, val in enumerate(df_results['TS']):
-        plt.text(i, val + 0.01, f'{val:.2f}', ha='center', fontweight='bold')
+# compute blended qualities
+cal_mix = sum(cal[i] * result_tons[i] for i in names) / demand
+ash_mix = sum(ash[i] * result_tons[i] for i in names) / demand
+sulfur_mix = sum(sulfur[i] * result_tons[i] for i in names) / demand
+moist_mix = sum(moist[i] * result_tons[i] for i in names) / demand
 
-    # 4. Ash (Minimalkan, target maksimum)
-    plt.figure(figsize=(10, 5))
-    plt.bar(df_results.index, df_results['Ash'], color=['#00BCD4', '#80DEEA'])
-    plt.axhline(targets['Ash_max'], color='r', linestyle='--', label=f'Target Max ({targets["Ash_max"]})')
-    plt.title('4. Perbandingan Ash Campuran (%)')
-    plt.ylabel('Ash (%)')
-    plt.ylim(min(df_results['Ash']) - 1, targets['Ash_max'] + 1)
-    plt.legend()
-    plt.grid(axis='y', linestyle=':')
-    for i, val in enumerate(df_results['Ash']):
-        plt.text(i, val + 0.1, f'{val:.2f}', ha='center', fontweight='bold')
+# prepare output dataframe
+out_df = pd.DataFrame.from_records([
+    {"Name": i,
+     "TonUsed": result_tons[i],
+     "Proportion": result_prop[i],
+     "Calorific": cal[i],
+     "Ash": ash[i],
+     "Sulfur": sulfur[i],
+     "Moisture": moist[i],
+     "AvailableTon": avail[i]}
+    for i in names
+])
 
-    plt.show()
+summary = pd.DataFrame([
+    {"Metric": "DemandTon", "Value": demand},
+    {"Metric": "Blended_Calorific_kcal/kg", "Value": cal_mix},
+    {"Metric": "Blended_Ash_%", "Value": ash_mix},
+    {"Metric": "Blended_Sulfur_%", "Value": sulfur_mix},
+    {"Metric": "Blended_Moisture_%", "Value": moist_mix},
+    {"Metric": "SolverStatus", "Value": status}
+])
 
-# Panggil fungsi visualisasi
-targets = {
-    'CV_min': Target_CV_min, 'TM_max': Target_TM_max, 
-    'Ash_max': Target_Ash_max, 'TS_max': Target_TS_max
-}
-plot_comparison(results_comp, targets)
+# ---------- Save results ----------
+with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
+    out_df.to_excel(writer, sheet_name="blend_details", index=False)
+    summary.to_excel(writer, sheet_name="summary", index=False)
+    stocks.to_excel(writer, sheet_name="input_stocks", index=False)
+print(f"Hasil disimpan ke {OUTPUT_FILE}")
+
+# ---------- Print concise summary ----------
+print("\nHasil ringkas:")
+for i in names:
+    print(f"  {i}: {result_tons[i]:.1f} ton ({result_prop[i]*100:.2f}%)")
+print(f"Blended Calorific = {cal_mix:.1f} kcal/kg")
+print(f"Blended Ash = {ash_mix:.2f} %")
+print(f"Blended Sulfur = {sulfur_mix:.3f} %")
+print(f"Blended Moisture = {moist_mix:.2f} %")
