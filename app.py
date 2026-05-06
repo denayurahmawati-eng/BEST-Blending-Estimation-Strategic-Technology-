@@ -121,8 +121,8 @@ m1, m2, m3, m4 = st.columns(4)
 with m1:
     st.markdown("""
     <div class="metric-card">
-        <div class="metric-value">Using</div>
-        <div class="metric-label">Coal Sources</div>
+        <div class="metric-value">4</div>
+        <div class="metric-label">Indicator Coal Sources</div>
     </div>
     """, unsafe_allow_html=True)
 
