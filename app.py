@@ -251,7 +251,7 @@ if st.button("🚀 Jalankan Optimasi"):
         for i in range(n)
     ]
 
-    # Fungsi objektif
+    # Fungsi 
     model_lp += pulp.lpSum(x_lp[i] * CV[i] for i in range(n))
 
     # Kendala
