@@ -158,16 +158,16 @@ st.subheader("📋 Data Kualitas Batubara")
 df = st.data_editor(
     pd.DataFrame({
         "Jenis": [
-            "MT 47-STOCK 1",
-            "MT 47-STOCK 3",
-            "BB 51-STOCK 2",
-            "BB 51-STOCK 4"
+            "A",
+            "B",
+            "C",
+            "D"
         ],
-        "Kalori (ar)": [4528, 4449, 5010, 5026],
-        "TM (%)": [27.87, 28.96, 27.75, 27.78],
-        "Ash (%)": [5.15, 5.66, 4.83, 4.14],
-        "TS (%)": [0.62, 0.55, 0.64, 0.65],
-        "Stok (ton)": [255100, 305900, 194850, 200950]
+        "Kalori (ar)": [0, 0, 0, 0],
+        "TM (%)": [0, 0, 0, 0],
+        "Ash (%)": [0, 0, 0, 0],
+        "TS (%)": [0, 0, 0, 0],
+        "Stok (ton)": [0, 0, 0, 0]
     }),
      num_rows="dynamic",
     use_container_width=True
