@@ -185,16 +185,16 @@ st.subheader("🎯 Target Spesifikasi")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    Target_CV_min = st.number_input("Target Kalori Minimum", 4500, 6000, 4800)
+    Target_CV_min = st.number_input("Target Kalori Minimum", 7500, 4500, 6000, 4800)
     Total_ton = st.number_input("Total Tonase (ton)", 10000, 500000, 55000)
 
 with col2:
-    Target_TM_max = st.number_input("TM Maksimum (%)", 20.0, 35.0, 28.0)
+    Target_TM_max = st.number_input("TM Maksimum (%)", 40.0, 20.0, 35.0, 28.0)
     Target_Ash_max = st.number_input("Ash Maksimum (%)", 2.0, 15.0, 8.0)
 
 with col3:
     Target_TS_max = st.number_input("TS Maksimum (%)", 0.2, 2.0, 0.8)
-    min_fraction = st.slider("Fraksi Minimum LP (%)", 0, 20, 10) / 100
+    min_fraction = st.slider("Fraksi Minimum LP (%)", 50, 0, 20, 10) / 100
 
 # =========================================================
 # 3. PROSES OPTIMASI
