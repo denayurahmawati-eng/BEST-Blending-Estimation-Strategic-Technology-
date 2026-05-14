@@ -158,16 +158,16 @@ st.subheader("📋 Data Kualitas Batubara")
 df = st.data_editor(
     pd.DataFrame({
         "Jenis": [
-            "A",
-            "B",
-            "C",
-            "D"
+            "MT 47-STOCK 1",
+            "MT 47-STOCK 3",
+            "BB 51-STOCK 2",
+            "BB 51-STOCK 4"
         ],
-        "Kalori (ar)": [0, 0, 0, 0],
-        "TM (%)": [0, 0, 0, 0],
-        "Ash (%)": [0, 0, 0, 0],
-        "TS (%)": [0, 0, 0, 0],
-        "Stok (ton)": [0, 0, 0, 0]
+        "Kalori (ar)": [4528, 4449, 5010, 5026],
+        "TM (%)": [27.87, 28.96, 27.75, 27.78],
+        "Ash (%)": [5.15, 5.66, 4.83, 4.14],
+        "TS (%)": [0.62, 0.55, 0.64, 0.65],
+        "Stok (ton)": [255100, 305900, 194850, 200950]
     }),
      num_rows="dynamic",
     use_container_width=True
@@ -185,16 +185,16 @@ st.subheader("🎯 Target Spesifikasi")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    Target_CV_min = st.number_input("Target Kalori Minimum", 4500, 6000, 7500, 4800)
-    Total_ton = st.number_input("Total Tonase (ton)", 10000, 500000, 1000000, 55000)
+    Target_CV_min = st.number_input("Target Kalori Minimum", 4500, 7500, 4800)
+    Total_ton = st.number_input("Total Tonase (ton)", 10000, 500000, 55000)
 
 with col2:
-    Target_TM_max = st.number_input("TM Maksimum (%)", 40.0, 20.0, 35.0, 28.0)
+    Target_TM_max = st.number_input("TM Maksimum (%)", 20.0, 40.0, 28.0)
     Target_Ash_max = st.number_input("Ash Maksimum (%)", 2.0, 15.0, 8.0)
 
 with col3:
     Target_TS_max = st.number_input("TS Maksimum (%)", 0.2, 2.0, 0.8)
-    min_fraction = st.slider("Fraksi Minimum LP (%)", 50, 0, 20, 10) / 100
+    min_fraction = st.slider("Fraksi Minimum LP (%)", 0, 50, 10) / 100
 
 # =========================================================
 # 3. PROSES OPTIMASI
