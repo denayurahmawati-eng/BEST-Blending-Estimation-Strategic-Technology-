@@ -185,7 +185,7 @@ st.subheader("🎯 Target Spesifikasi")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    Target_CV_min = st.number_input("Target Kalori Minimum", 4500, 7500, 4800)
+    Target_CV_min = st.number_input("Target Kalori Minimum", 3500, 9000, 4800)
     Total_ton = st.number_input("Total Tonase (ton)", 10000, 500000, 55000)
 
 with col2:
