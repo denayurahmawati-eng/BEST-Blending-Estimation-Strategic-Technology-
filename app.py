@@ -194,7 +194,7 @@ with col2:
 
 with col3:
     Target_TS_max = st.number_input("TS Maksimum (%)", 0.2, 2.0, 0.8)
-    min_fraction = st.slider("Fraksi Minimum LP (%)", 0, 50, 10) / 100
+    min_fraction = st.slider("Fraksi Minimum LP (%)", 0, 100, 10) / 100
 
 # =========================================================
 # 3. PROSES OPTIMASI
