@@ -190,7 +190,7 @@ with col1:
 
 with col2:
     Target_TM_max = st.number_input("TM Maksimum (%)", 20.0, 40.0, 28.0)
-    Target_Ash_max = st.number_input("Ash Maksimum (%)", 2.0, 15.0, 0.8)
+    Target_Ash_max = st.number_input("Ash Maksimum (%)", 2.0, 15.0, 8.0)
 
 with col3:
     Target_TS_max = st.number_input("TS Maksimum (%)", 0.2, 2.0, 0.8)
